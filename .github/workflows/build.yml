@@ -1,0 +1,46 @@
+name: Build Real Chess APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Generate full Android project and compile APK
+        run: |
+          # Создаем полноценный проект со всеми системными папками Android
+          flutter create --platforms=android chess_project
+          
+          # Копируем наш код игры внутрь созданного проекта
+          if [ -f "main.dart" ]; then
+            cp main.dart chess_project/lib/main.dart
+          elif [ -f "lib/main.dart" ]; then
+            cp lib/main.dart chess_project/lib/main.dart
+          fi
+          
+          # Переходим в папку проекта, подключаем шахматный движок и собираем APK
+          cd chess_project
+          flutter pub add chess
+          flutter build apk --release
+
+      - name: Upload Ready APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: chess-master-apk
+          path: chess_project/build/app/outputs/flutter-apk/app-release.apk
